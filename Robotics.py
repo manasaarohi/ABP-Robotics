@@ -11,10 +11,10 @@ import math
 tank = MoveTank(OUTPUT_A, OUTPUT_B)
 speed = 30
 TURN_MULTIPLIER = 2.2
-WHEEL_DIAMETER_CM = 4 
+WHEEL_DIAMETER_CM = 5.5
 WHEEL_CIRCUMFERENCE = WHEEL_DIAMETER_CM * math.pi
 
-# --- ARM & CLAW SETUP ---
+#  ARM & CLAW SETUP 
 try:
     # "Motor" is generic and works for both EV3 (White) and NXT (Orange) motors
     # Ensure Arm is in Port C and Claw is in Port D
@@ -66,12 +66,20 @@ def wait_and_check():
             sys.exit(0)
         time.sleep(0.01)
 
-# --- MOVEMENT FUNCTIONS ---
+#  MOVEMENT FUNCTIONS
 
 def forward(cm):
     if STOP_REQUESTED: return
+    # This logic converts CENTIMETERS to Rotations.
     rotations = cm / WHEEL_CIRCUMFERENCE
     tank.on_for_rotations(SpeedPercent(speed), SpeedPercent(speed), rotations, brake=True, block=False)
+    wait_and_check()
+
+def backward(cm):
+    if STOP_REQUESTED: return
+    rotations = cm / WHEEL_CIRCUMFERENCE
+    # Negative speed moves the robot backward
+    tank.on_for_rotations(SpeedPercent(-speed), SpeedPercent(-speed), rotations, brake=True, block=False)
     wait_and_check()
 
 def left(degrees):
@@ -86,14 +94,14 @@ def right(degrees):
     tank.on_for_degrees(SpeedPercent(speed), SpeedPercent(-speed), wheel_turn, brake=True, block=False)
     wait_and_check()
 
-# --- NEW ARM FUNCTIONS ---
+# NEW ARM FUNCTIONS
 
-def lift_arm(degrees=90, speed_sp=30):
+def lower_arm(degrees=90, speed_sp=30):
     if STOP_REQUESTED or not arm: return
     arm.on_for_degrees(SpeedPercent(-speed_sp), degrees, block=False)
     wait_and_check()
 
-def lower_arm(degrees=90, speed_sp=20):
+def lift_arm(degrees=90, speed_sp=20):
     if STOP_REQUESTED or not arm: return
     # Use negative speed to go down
     arm.on_for_degrees(SpeedPercent(speed_sp), degrees, block=False)
@@ -103,21 +111,20 @@ def grab():
     if STOP_REQUESTED or not claw: return
     claw.on(SpeedPercent(50), block=False)
     time.sleep(1.0) 
-    claw.stop() # 'hold' mode will keep it pinched tight
+    claw.stop()
     
 def release():
     if STOP_REQUESTED or not claw: return
     claw.on_for_degrees(SpeedPercent(-50), 100, block=False)
     wait_and_check()
 
-# --- INSTRUCTIONS ---
+# INSTRUCTIONS
 instructions = [
-    lambda: forward(1),           # Drive to object
-    lambda: lift_arm(100),       # lift arm to reach object
-    lambda: grab(),               # Close claw
-    lambda: lower_arm(100),        # lower object up
-    lambda: forward(20),          # Drive away with object
-    lambda: release()             # Drop object
+    lambda: lift_arm(30),
+    lambda: forward(30),
+    lambda: grab(),
+    lambda: backward(45),
+    lambda: release()
 ]
 
 if __name__ == "__main__":
@@ -128,7 +135,6 @@ if __name__ == "__main__":
     listener_thread.start()
 
     try:
-        print("Robot Ready. Press '-' to Emergency Stop.")
         for step in instructions:
             if STOP_REQUESTED: break
             step()
